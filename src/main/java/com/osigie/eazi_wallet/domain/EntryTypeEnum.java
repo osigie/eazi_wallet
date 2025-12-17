@@ -1,6 +1,6 @@
 package com.osigie.eazi_wallet.domain;
 
-public enum EntryType {
+public enum EntryTypeEnum {
     CREDIT,
     DEBIT
 }
