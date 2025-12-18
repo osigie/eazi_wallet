@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/transactions")
 public class TransactionController {
-
-
     private final WalletService walletService;
-
 
     public TransactionController(WalletService walletService) {
         this.walletService = walletService;
@@ -36,7 +33,7 @@ public class TransactionController {
     }
 
 
-    @PostMapping("")
+    @PostMapping()
     public ResponseEntity<BaseResponseDto<String>> transfer(@Valid @RequestBody TransferRequest dto) {
         String response = walletService.transferFunds(
                 dto.fromWalletId(),
