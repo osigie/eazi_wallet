@@ -4,6 +4,7 @@ import com.osigie.eazi_wallet.dto.request.TransactionRequestDto;
 import com.osigie.eazi_wallet.dto.request.TransferRequest;
 import com.osigie.eazi_wallet.dto.response.BaseResponseDto;
 import com.osigie.eazi_wallet.service.WalletService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,20 +25,19 @@ public class TransactionController {
     }
 
 
-    @PostMapping
-    public ResponseEntity<BaseResponseDto<String>> createTransaction(@RequestBody TransactionRequestDto dto) {
-        String response = walletService.createTransaction(
+    @PostMapping("/top-up")
+    public ResponseEntity<BaseResponseDto<String>> topUp(@Valid @RequestBody TransactionRequestDto dto) {
+        String response = walletService.topUp(
                 dto.fromWalletId(),
                 dto.amount(),
-                dto.type(),
                 dto.idempotencyKey()
         );
         return new ResponseEntity<>(new BaseResponseDto<>("success", HttpStatus.OK.value(), response), HttpStatus.OK);
     }
 
 
-    @PostMapping("/transfer")
-    public ResponseEntity<BaseResponseDto<String>> transfer(@RequestBody TransferRequest dto) {
+    @PostMapping("")
+    public ResponseEntity<BaseResponseDto<String>> transfer(@Valid @RequestBody TransferRequest dto) {
         String response = walletService.transferFunds(
                 dto.fromWalletId(),
                 dto.toWalletId(),

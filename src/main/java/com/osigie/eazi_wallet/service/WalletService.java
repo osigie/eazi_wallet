@@ -10,7 +10,9 @@ public interface WalletService {
 
     Wallet createWallet(Wallet wallet);
 
-    String createTransaction(UUID fromWalletId, BigInteger amount, EntryTypeEnum type, String idempotencyKey);
+    Wallet getWallet(UUID id);
+
+    String topUp(UUID fromWalletId, BigInteger amount, String idempotencyKey);
 
     String transferFunds(UUID fromWalletId, UUID toWalletId, BigInteger amount, String idempotencyKey);
 }

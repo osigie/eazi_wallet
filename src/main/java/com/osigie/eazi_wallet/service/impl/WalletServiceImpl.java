@@ -30,23 +30,51 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public Wallet createWallet(Wallet wallet) {
-        return walletRepository.save(wallet);
+        Wallet saveWallet = walletRepository.save(wallet);
+        long systemInitialBalance = 1_000_000L;
+
+        Money initialFunding = new Money(
+                BigInteger.valueOf(systemInitialBalance),
+                wallet.getCurrencyCode()
+        );
+
+        saveWallet.setBalanceCached(initialFunding.amount());
+
+        ledgerEntryRepository.save(
+                new LedgerEntry(
+                        wallet,
+                        initialFunding.amount(),
+                        EntryTypeEnum.CREDIT,
+                        initialFunding.amount(),
+                        saveWallet.getId() + "::SYSTEM::INITIAL_FUNDING"
+                )
+        );
+
+        return wallet;
     }
 
     @Override
+    public Wallet getWallet(UUID id) {
+        return walletRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Wallet not found"));
+    }
+
+
+    @Override
     @Transactional
-    public String createTransaction(UUID fromWalletId, BigInteger amount, EntryTypeEnum type, String idempotencyKey) {
+    public String topUp(UUID fromWalletId, BigInteger amount, String idempotencyKey) {
 
         Wallet wallet = lockWallet(fromWalletId);
 
         Money transactionAmount = new Money(amount, wallet.getCurrencyCode());
         Money currentBalance = new Money(wallet.getBalanceCached(), wallet.getCurrencyCode());
 
-        Money newBalance = calculateNewBalance(currentBalance, transactionAmount, type);
+        Money newBalance = currentBalance.add(transactionAmount);
+
         wallet.setBalanceCached(newBalance.amount());
 
-        saveLedgerEntry(wallet, amount, type, newBalance.amount(), idempotencyKey);
+        saveLedgerEntry(wallet, amount, EntryTypeEnum.CREDIT, newBalance.amount(), idempotencyKey);
 
         return "Transaction created successfully";
     }
@@ -103,12 +131,6 @@ public class WalletServiceImpl implements WalletService {
     private Wallet lockWallet(UUID walletId) {
         return walletRepository.selectByIdForUpdate(walletId)
                 .orElseThrow(() -> new ResourceNotFoundException("Wallet not found with id: " + walletId));
-    }
-
-    private Money calculateNewBalance(Money currentBalance, Money amount, EntryTypeEnum type) {
-        return type == EntryTypeEnum.CREDIT
-                ? currentBalance.add(amount)
-                : currentBalance.subtract(amount);
     }
 
     private void saveLedgerEntry(Wallet wallet, BigInteger amount, EntryTypeEnum type,
