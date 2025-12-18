@@ -34,12 +34,12 @@ public class LedgerEntry extends BaseModel {
 
     @Column(name = "type", nullable = false)
     @Enumerated(EnumType.STRING)
-    EntryTypeEnum type;
+    private EntryTypeEnum type;
 
 
-    public LedgerEntry(Wallet wallet, Money money, EntryTypeEnum type, BigInteger balanceAfter, String key) {
+    public LedgerEntry(Wallet wallet, BigInteger money, EntryTypeEnum type, BigInteger balanceAfter, String key) {
         this.wallet = wallet;
-        this.amount = money.amount();
+        this.amount = money;
         this.type = type;
         this.balanceAfter = balanceAfter;
         this.idempotencyKey = key;

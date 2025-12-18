@@ -3,7 +3,7 @@ CREATE TABLE charges
     id         UUID                     NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE,
-    percentage BIGINT                   NOT NULL,
+    percentage DECIMAL(10, 4)           NOT NULL,
     type       VARCHAR(255)             NOT NULL,
     is_active  BOOLEAN                  NOT NULL,
     CONSTRAINT pk_charges PRIMARY KEY (id)
@@ -16,8 +16,8 @@ CREATE TABLE ledger_entries
     updated_at      TIMESTAMP WITH TIME ZONE,
     idempotency_key VARCHAR(255)             NOT NULL,
     wallet_id       UUID                     NOT NULL,
-    balance         DECIMAL                  NOT NULL,
-    balance_after   DECIMAL                  NOT NULL,
+    balance         NUMERIC                   NOT NULL,
+    balance_after   NUMERIC                   NOT NULL,
     type            VARCHAR(255)             NOT NULL,
     CONSTRAINT pk_ledger_entries PRIMARY KEY (id)
 );
@@ -27,7 +27,8 @@ CREATE TABLE wallets
     id             UUID                     NOT NULL,
     created_at     TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at     TIMESTAMP WITH TIME ZONE,
-    balance_cached DECIMAL                  NOT NULL,
+    balance_cached NUMERIC                   NOT NULL,
+    currency       VARCHAR(3)               NOT NULL,
     CONSTRAINT pk_wallets PRIMARY KEY (id)
 );
 
