@@ -1,12 +1,18 @@
-package com.osigie.rehook.mapper;
+package com.osigie.eazi_wallet.mapper;
 
-import com.osigie.rehook.configuration.MapstructMapperConfig;
-import com.osigie.rehook.domain.model.DeliveryAttempt;
-import com.osigie.rehook.dto.response.DeliveryAttemptResponseDto;
+import com.osigie.eazi_wallet.domain.Wallet;
+import com.osigie.eazi_wallet.dto.request.CreateWalletRequestDto;
+import com.osigie.eazi_wallet.dto.response.WalletResponseDto;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
 
-@Mapper(config = MapstructMapperConfig.class)
-public interface DeliveryAttemptMapper {
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+public interface WalletMapper {
 
-    DeliveryAttemptResponseDto mapDto(DeliveryAttempt source);
+    @Mapping(target = "balance", source = "balanceCached")
+    WalletResponseDto mapDto(Wallet source);
+
+    @Mapping(target = "currencyCode", source = "currencyCode")
+    Wallet mapEntity(CreateWalletRequestDto source);
 }

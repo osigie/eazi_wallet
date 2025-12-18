@@ -11,16 +11,10 @@ public record Money(BigInteger amount, String currency) {
     }
 
 
-    public static Money zero(String currency) {
-        return new Money(BigInteger.ZERO, currency);
-    }
-
-
     public Money add(Money other) {
         ensureSameCurrency(other);
         return new Money(this.amount.add(other.amount), currency);
     }
-
 
     public Money subtract(Money other) {
         ensureSameCurrency(other);

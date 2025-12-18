@@ -1,4 +1,8 @@
 package com.osigie.eazi_wallet.dto.response;
 
-public record WalletResponseDto() {
+import java.math.BigInteger;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+public record WalletResponseDto(UUID id, BigInteger balance, String currencyCode, OffsetDateTime createdAt, OffsetDateTime updatedAt) {
 }

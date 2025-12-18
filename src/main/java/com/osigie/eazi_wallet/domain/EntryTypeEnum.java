@@ -2,5 +2,5 @@ package com.osigie.eazi_wallet.domain;
 
 public enum EntryTypeEnum {
     CREDIT,
-    DEBIT
+    CHARGE, DEBIT
 }

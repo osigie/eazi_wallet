@@ -1,4 +1,4 @@
 package com.osigie.eazi_wallet.dto.request;
 
-public record CreateWalletRequestDto() {
+public record CreateWalletRequestDto(String currencyCode) {
 }
