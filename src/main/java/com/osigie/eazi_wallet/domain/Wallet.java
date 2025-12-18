@@ -23,7 +23,7 @@ public class Wallet extends BaseModel {
 
     @Builder
     public Wallet(BigInteger balanceCached, String currencyCode) {
-        this.balanceCached = BigInteger.ZERO;
+        this.balanceCached = balanceCached;
         this.currencyCode = currencyCode;
     }
 
