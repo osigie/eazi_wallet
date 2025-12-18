@@ -32,7 +32,6 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public Wallet createWallet(Wallet wallet) {
-        Wallet saveWallet = walletRepository.save(wallet);
         long systemInitialBalance = 1_000_000L;
 
         Money initialFunding = new Money(
@@ -40,7 +39,8 @@ public class WalletServiceImpl implements WalletService {
                 wallet.getCurrencyCode()
         );
 
-        saveWallet.setBalanceCached(initialFunding.amount());
+        wallet.setBalanceCached(initialFunding.amount());
+        Wallet saveWallet = walletRepository.save(wallet);
 
         ledgerEntryRepository.save(
                 new LedgerEntry(
