@@ -1,6 +1,9 @@
 package com.osigie.eazi_wallet.service.impl;
 
 import com.osigie.eazi_wallet.domain.*;
+import com.osigie.eazi_wallet.exception.DuplicateTransactionException;
+import com.osigie.eazi_wallet.exception.InsufficientFundsException;
+import com.osigie.eazi_wallet.exception.ResourceNotFoundException;
 import com.osigie.eazi_wallet.repository.LedgerEntryRepository;
 import com.osigie.eazi_wallet.repository.WalletRepository;
 import com.osigie.eazi_wallet.service.RateService;
@@ -53,7 +56,7 @@ public class WalletServiceImpl implements WalletService {
     public String transferFunds(UUID fromWalletId, UUID toWalletId, BigInteger amount, String idempotencyKey) {
 
         if (fromWalletId.equals(toWalletId)) {
-            throw new RuntimeException("You can not transfer to your wallet");
+            throw new IllegalArgumentException("You can not transfer to your wallet");
         }
 
         Wallet sender = lockWallet(fromWalletId);
@@ -66,7 +69,7 @@ public class WalletServiceImpl implements WalletService {
         Money senderBalance = new Money(sender.getBalanceCached(), sender.getCurrencyCode());
 
         if (senderBalance.amount().compareTo(totalDeduction.amount()) < 0) {
-            throw new RuntimeException("Insufficient funds");
+            throw new InsufficientFundsException("Insufficient Funds");
         }
 
         Money newSenderBalance = senderBalance.subtract(totalDeduction);
@@ -99,7 +102,7 @@ public class WalletServiceImpl implements WalletService {
 
     private Wallet lockWallet(UUID walletId) {
         return walletRepository.selectByIdForUpdate(walletId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found with id: " + walletId));
     }
 
     private Money calculateNewBalance(Money currentBalance, Money amount, EntryTypeEnum type) {
@@ -110,12 +113,19 @@ public class WalletServiceImpl implements WalletService {
 
     private void saveLedgerEntry(Wallet wallet, BigInteger amount, EntryTypeEnum type,
                                  BigInteger balanceAfter, String idempotencyKey) {
+
+        if (ledgerEntryRepository.existsByWalletIdAndTypeAndIdempotencyKey(
+                wallet.getId(), type, idempotencyKey)) {
+            throw new DuplicateTransactionException(idempotencyKey);
+        }
+
         try {
             LedgerEntry entry = new LedgerEntry(wallet, amount, type, balanceAfter, idempotencyKey);
             ledgerEntryRepository.save(entry);
-        } catch (DataIntegrityViolationException ex) {
-            throw new RuntimeException("Possible duplicate transaction for idempotency key");
+        } catch (DataIntegrityViolationException e) {
+            throw new DuplicateTransactionException(idempotencyKey);
         }
+
     }
 
 
