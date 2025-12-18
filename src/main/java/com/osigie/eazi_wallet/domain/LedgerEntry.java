@@ -10,7 +10,7 @@ import java.math.BigInteger;
 
 @Entity
 @Table(name = "ledger_entries", uniqueConstraints = {
-        @UniqueConstraint(name = "unique_idempotency_key", columnNames = "idempotency_key")
+        @UniqueConstraint(name = "unique_wallet_id_and_type_and_idempotencyKey", columnNames = {"wallet_id", "type", "idempotency_key"})
 })
 @Getter
 @Setter
