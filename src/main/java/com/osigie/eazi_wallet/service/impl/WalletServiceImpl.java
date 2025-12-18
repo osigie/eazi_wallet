@@ -33,22 +33,19 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public String createTransaction(UUID fromWalletId, BigInteger amount, EntryTypeEnum type, String IdempotencyKey) {
-        Wallet wallet = walletRepository.selectByIdForUpdate(fromWalletId).orElseThrow(() -> new RuntimeException("Wallet not found"));
+    public String createTransaction(UUID fromWalletId, BigInteger amount, EntryTypeEnum type, String idempotencyKey) {
 
-        Money money = new Money(amount, wallet.getCurrencyCode());
+        Wallet wallet = lockWallet(fromWalletId);
 
-        BigInteger signed = type == EntryTypeEnum.CREDIT ? money.amount() : money.amount().negate();
+        Money transactionAmount = new Money(amount, wallet.getCurrencyCode());
+        Money currentBalance = new Money(wallet.getBalanceCached(), wallet.getCurrencyCode());
 
-        wallet.updateBalanceCache(signed);
+        Money newBalance = calculateNewBalance(currentBalance, transactionAmount, type);
+        wallet.setBalanceCached(newBalance.amount());
 
-        try {
-            ledgerEntryRepository.save(new LedgerEntry(wallet, signed, type, wallet.getBalanceCached(), IdempotencyKey));
+        saveLedgerEntry(wallet, amount, type, newBalance.amount(), idempotencyKey);
 
-            return "Transaction created successfully";
-        } catch (DataIntegrityViolationException ex) {
-            throw new RuntimeException("Possible duplicate transaction for idempotency key");
-        }
+        return "Transaction created successfully";
     }
 
     @Override
@@ -59,32 +56,68 @@ public class WalletServiceImpl implements WalletService {
             throw new RuntimeException("You can not transfer to your wallet");
         }
 
-        Wallet sender = walletRepository.selectByIdForUpdate(fromWalletId).orElseThrow(() -> new RuntimeException("Sender wallet not found"));
+        Wallet sender = lockWallet(fromWalletId);
+        Wallet recipient = lockWallet(toWalletId);
 
-        Wallet recipient = walletRepository.selectByIdForUpdate(toWalletId).orElseThrow(() -> new RuntimeException("Recipient wallet not found"));
 
+        Money transferAmount = new Money(amount, sender.getCurrencyCode());
+        Money transferFee = calculateTransferFee(amount, sender.getCurrencyCode());
+        Money totalDeduction = transferAmount.add(transferFee);
+        Money senderBalance = new Money(sender.getBalanceCached(), sender.getCurrencyCode());
 
-        sender.updateBalanceCache(amount.negate());
-        BigInteger balanceBeforeCharges = sender.getBalanceCached();
+        if (senderBalance.amount().compareTo(totalDeduction.amount()) < 0) {
+            throw new RuntimeException("Insufficient funds");
+        }
 
-        BigInteger charges = rateService.getRate(amount, ChargeTypeEnum.TRANSFER_FEE);
-        sender.updateBalanceCache(charges.negate());
+        Money newSenderBalance = senderBalance.subtract(totalDeduction);
+        Money balanceAfterTransfer = senderBalance.subtract(transferAmount);
+        Money recipientBalance = new Money(recipient.getBalanceCached(), recipient.getCurrencyCode());
+        Money newRecipientBalance = recipientBalance.add(transferAmount);
 
-        recipient.updateBalanceCache(amount);
+        sender.setBalanceCached(newSenderBalance.amount());
+        recipient.setBalanceCached(newRecipientBalance.amount());
 
+        saveLedgerEntry(sender, amount, EntryTypeEnum.DEBIT,
+                balanceAfterTransfer.amount(),
+                createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.DEBIT));
+
+        saveLedgerEntry(sender, transferFee.amount(), EntryTypeEnum.CHARGE,
+                newSenderBalance.amount(),
+                createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.CHARGE));
+
+        saveLedgerEntry(recipient, amount, EntryTypeEnum.CREDIT,
+                newRecipientBalance.amount(),
+                createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.CREDIT));
+
+        return "Transfer completed successfully";
+    }
+
+    private Money calculateTransferFee(BigInteger amount, String currencyCode) {
+        BigInteger feeAmount = rateService.getRate(amount, ChargeTypeEnum.TRANSFER_FEE);
+        return new Money(feeAmount, currencyCode);
+    }
+
+    private Wallet lockWallet(UUID walletId) {
+        return walletRepository.selectByIdForUpdate(walletId)
+                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+    }
+
+    private Money calculateNewBalance(Money currentBalance, Money amount, EntryTypeEnum type) {
+        return type == EntryTypeEnum.CREDIT
+                ? currentBalance.add(amount)
+                : currentBalance.subtract(amount);
+    }
+
+    private void saveLedgerEntry(Wallet wallet, BigInteger amount, EntryTypeEnum type,
+                                 BigInteger balanceAfter, String idempotencyKey) {
         try {
-            ledgerEntryRepository.save(new LedgerEntry(sender, amount, EntryTypeEnum.DEBIT, balanceBeforeCharges, this.createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.DEBIT)));
-
-            ledgerEntryRepository.save(new LedgerEntry(sender, charges, EntryTypeEnum.CHARGE, sender.getBalanceCached(), this.createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.CHARGE)));
-
-            ledgerEntryRepository.save(new LedgerEntry(recipient, amount, EntryTypeEnum.CREDIT, recipient.getBalanceCached(), this.createIdempotencyKeyRef(idempotencyKey, EntryTypeEnum.CREDIT)));
-
-            return "Transfer done successfully";
+            LedgerEntry entry = new LedgerEntry(wallet, amount, type, balanceAfter, idempotencyKey);
+            ledgerEntryRepository.save(entry);
         } catch (DataIntegrityViolationException ex) {
             throw new RuntimeException("Possible duplicate transaction for idempotency key");
         }
-
     }
+
 
     private String createIdempotencyKeyRef(String key, EntryTypeEnum type) {
         return key.trim() + "::" + type.name();

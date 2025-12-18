@@ -21,15 +21,6 @@ public class Wallet extends BaseModel {
     private String currencyCode;
 
 
-    public void updateBalanceCache(BigInteger data) {
-        BigInteger next = balanceCached.add(data);
-        if (next.signum() < 0) {
-            throw new IllegalStateException("Balance cannot go negative");
-        }
-        this.balanceCached = next;
-    }
-
-
     @Builder
     public Wallet(BigInteger balanceCached, String currencyCode) {
         this.balanceCached = BigInteger.ZERO;
