@@ -1,5 +1,8 @@
 package com.osigie.eazi_wallet.domain;
 
+import com.osigie.eazi_wallet.exception.CurrencyMismatchException;
+import com.osigie.eazi_wallet.exception.InsufficientFundsException;
+
 import java.math.BigInteger;
 
 public record Money(BigInteger amount, String currency) {
@@ -20,7 +23,8 @@ public record Money(BigInteger amount, String currency) {
         ensureSameCurrency(other);
         BigInteger result = this.amount.subtract(other.amount);
         if (result.signum() < 0) {
-            throw new IllegalStateException("Insufficient funds");
+            throw new InsufficientFundsException(amount, other.amount);
+
         }
         return new Money(result, currency);
     }
@@ -28,7 +32,7 @@ public record Money(BigInteger amount, String currency) {
 
     private void ensureSameCurrency(Money other) {
         if (!this.currency.equals(other.currency)) {
-            throw new IllegalArgumentException("Currency mismatch");
+            throw new CurrencyMismatchException(currency, other.currency);
         }
     }
 }
