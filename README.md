@@ -9,6 +9,11 @@ Eazi Wallet is a simple, modern, and extensible open-source wallet application b
 
 Eazi Wallet is a core banking system that provides a robust, scalable, and secure infrastructure for financial applications. It allows for the management of wallets and the transactions associated with them. It is designed to be easily deployed and managed, providing a RESTful API for integration with other services.
 
+## Trade Offs
+
+* Seed initial charge of type TRANSFER_FEE with percentage of 1 in basis points.
+* Initial loading of 1_000_000 in wallet creation.
+
 ## Common use cases
 
 *   Creating and managing user wallets.
